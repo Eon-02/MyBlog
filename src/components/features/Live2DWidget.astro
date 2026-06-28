@@ -25,6 +25,7 @@ interface Props {
 					x?: number;
 					y?: number;
 			  }[];
+		disableMouseTracking?: boolean;
 		position?: "bottom-left" | "bottom-right";
 		size?: number | { width: number; height: number };
 		primaryColor?: string;
@@ -100,6 +101,7 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 	data-menus={JSON.stringify(serializeMenus(config.menus))}
 	data-tips={JSON.stringify(config.tips || {})}
 	data-responsive={JSON.stringify(config.responsive || {})}
+	data-disable-mouse-tracking={config.disableMouseTracking ? "true" : ""}
 >
 </div>
 
@@ -127,6 +129,46 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 	});
 	tipObserver.observe(document.body, { childList: true, subtree: true });
 
+	// 语音播放相关
+	let tapSoundMap: Record<string, string[]> = {};
+	let currentVolume = 0;
+
+	// 从 model3.json 构建声音映射表
+	async function buildSoundMap(modelPath: string) {
+		try {
+			const resp = await fetch(modelPath);
+			const modelData = await resp.json() as any;
+			const homeDir = modelPath.substring(0, modelPath.lastIndexOf("/") + 1);
+			const newMap: Record<string, string[]> = {};
+			if (modelData.FileReferences?.Motions) {
+				for (const [group, motions] of Object.entries(modelData.FileReferences.Motions)) {
+					const sounds: string[] = [];
+					for (const motion of (motions as any[])) {
+						if (motion.Sound) {
+							sounds.push(homeDir + motion.Sound);
+						}
+					}
+					if (sounds.length > 0) {
+						newMap[group] = sounds;
+					}
+				}
+			}
+			tapSoundMap = newMap;
+		} catch (e) {
+			console.warn("[l2d] Failed to load sound map:", e);
+		}
+	}
+
+	// 同步播放点击语音（绕过浏览器的自动播放策略导致库内声音异步播放被阻止的问题）
+	function playTapSound(group: string, volume: number) {
+		const sounds = tapSoundMap[group];
+		if (!sounds || sounds.length === 0) return;
+		const src = sounds[Math.floor(Math.random() * sounds.length)];
+		const audio = new Audio(src);
+		audio.volume = volume;
+		audio.play().catch((e) => console.warn("[l2d] sound play failed:", e));
+	}
+
 	// 菜单动作映射
 	let currentModelIndex = 0;
 	const menuActions: Record<string, (widget: any) => void> = {
@@ -138,7 +180,45 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 			const container = document.getElementById("l2d-widget-container");
 			const models = JSON.parse(container?.dataset.models || "[]");
 			currentModelIndex = (currentModelIndex + 1) % models.length;
+			// 更新当前模型音量
+			const newModelConfig = models[currentModelIndex];
+			currentVolume = newModelConfig.volume ?? 0;
 			widget.switchModel(currentModelIndex);
+			// 切换模型后重新绑定点击事件、禁用鼠标追踪、重建语音
+			setTimeout(() => {
+				const l2d = (widget.l2d as any);
+				// 重新绑定点击交互（带动画+语音）
+				l2d.on("tap", (areaName: string) => {
+					const areaMotionMap: Record<string, string> = {
+						"face": "Tapface",
+						"hair": "Taphair",
+						"xiongbu": "Tapxiongbu",
+						"qunzi": "Tapqunzi",
+						"leg": "Tapleg",
+					};
+					const group = areaMotionMap[areaName];
+					if (group) {
+						l2d.playMotion(group);
+						playTapSound(group, currentVolume);
+					}
+				});
+				// 重新禁用鼠标追踪
+				if (container?.dataset.disableMouseTracking === "true") {
+					const model = l2d._state?.l2d6Model;
+					if (model?.mouseMoveEventListener) {
+						document.removeEventListener("mousemove", model.mouseMoveEventListener);
+						model.mouseMoveEventListener = null;
+					}
+					if (model?.mouseEndedEventListener) {
+						document.removeEventListener("mouseout", model.mouseEndedEventListener);
+						model.mouseEndedEventListener = null;
+					}
+				}
+				// 重建语音映射 + 关闭库内声音（避免浏览器自动播放策略阻止）
+				const modelPath = newModelConfig.path;
+				buildSoundMap(modelPath);
+				l2d.setVolume(0);
+			}, 500);
 		},
 	};
 
@@ -158,6 +238,7 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 			const menus = JSON.parse(container.dataset.menus || "{}");
 			const tips = JSON.parse(container.dataset.tips || "{}");
 			const responsive = JSON.parse(container.dataset.responsive || "{}");
+			const disableMouseTracking = container.dataset.disableMouseTracking === "true";
 
 			// 响应式检查：移动端隐藏
 			if (responsive.hideOnMobile) {
@@ -225,7 +306,52 @@ function serializeMenus(menus: Props["config"]["menus"]) {
 				}
 			}
 
-			createWidget(options);
+			const widget = createWidget(options);
+
+			// 语音初始化：获取当前模型音量、构建声音映射表、关闭库内异步声音
+			const currentModelConfig = models[currentModelIndex] || models[0];
+			currentVolume = currentModelConfig.volume ?? 0;
+			const modelLoaded = () => {
+				buildSoundMap(currentModelConfig.path);
+				widget.l2d.setVolume(0);
+			};
+			widget.l2d.on("loaded", modelLoaded);
+
+			// 点击交互：根据点击部位播放对应动作+语音
+			widget.l2d.on("tap", (areaName: string) => {
+				const areaMotionMap: Record<string, string> = {
+					"face": "Tapface",
+					"hair": "Taphair",
+					"xiongbu": "Tapxiongbu",
+					"qunzi": "Tapqunzi",
+					"leg": "Tapleg",
+				};
+				const group = areaMotionMap[areaName];
+				if (group) {
+					widget.l2d.playMotion(group);
+					playTapSound(group, currentVolume);
+				}
+			});
+			
+			// 禁用鼠标追踪：模型不再跟随鼠标转动头部
+			if (disableMouseTracking) {
+				const disableTracking = () => {
+					const l2d = (widget.l2d as any);
+					const model = l2d._state?.l2d6Model;
+					if (model) {
+						if (model.mouseMoveEventListener) {
+							document.removeEventListener("mousemove", model.mouseMoveEventListener);
+							model.mouseMoveEventListener = null;
+						}
+						if (model.mouseEndedEventListener) {
+							document.removeEventListener("mouseout", model.mouseEndedEventListener);
+							model.mouseEndedEventListener = null;
+						}
+					}
+				};
+				// 等模型加载完成后禁用
+				widget.l2d.on("loaded", disableTracking);
+			}
 		} catch (e) {
 			console.error("Failed to initialize Live2D widget:", e);
 		}

@@ -53,7 +53,7 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 				name: "小さな願い",
 				artist: "成瀬未亜",
 				url: "/assets/music/小さな願い_audio.mp3",
-				cover: "/assets/music/cover/【柚子社天神乱漫龙胆琉璃角色曲】小さな願い - 竜胆ルリ（CV成瀬未亜）.png",
+				cover: "/assets/music/cover/小さな願い_audio.jpg",
 				lrc: "",
 			},
 		],

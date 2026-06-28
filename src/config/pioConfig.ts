@@ -85,27 +85,21 @@ export const spineModelConfig: SpineModelConfig = {
 // Live2D 看板娘配置 (使用 l2d-widget 库，文档：https://l2d-widget.hacxy.cn)
 export const live2dWidgetConfig: Live2DWidgetConfig = {
 	// Live2D 看板娘开关
-	enable: false,
+	enable: true,
+	// 是否禁用鼠标追踪（模型不再跟随鼠标转动头部）
+	disableMouseTracking: true,
 	// 模型配置，支持单个模型或数组（多模型切换）
 	model: [
 		{
-			// Live2D模型本地文件路径
-			path: "/pio/models/live2d/snow_miku/model.json",
+			// 丛雨 Live2D 模型（新增表情第二版）
+			path: "/pio/models/live2d/murasame/Murasame.model3.json",
 			// 动作声音音量 范围0~1，默认 0（静音）
-			volume: 0,
+			volume: 0.8,
 			// 模型缩放比例
 			scale: 1,
 			// X轴偏移，范围 -2~2，正值向右
 			x: 0,
 			// Y轴偏移，范围 -2~2，正值向上
-			y: 0,
-		},
-		{
-			// 外部直连模型
-			path: "https://model.hacxy.cn/cat-black/model.json",
-			volume: 0,
-			scale: 1,
-			x: 0,
 			y: 0,
 		},
 	],
@@ -143,11 +137,6 @@ export const live2dWidgetConfig: Live2DWidgetConfig = {
 				label: "切换模型",
 				action: "switchModel",
 			},
-			{
-				icon: "mdi:github",
-				label: "GitHub",
-				action: "github",
-			},
 		],
 		// 菜单对齐方式
 		align: "right" as const,
@@ -157,18 +146,18 @@ export const live2dWidgetConfig: Live2DWidgetConfig = {
 		// 气泡开关
 		enable: true,
 		// 初始欢迎消息
-		welcomeMessage: ["你好呀！", "欢迎来到我的世界！"],
+		welcomeMessage: ["狗修金！"],
 		// 循环提示内容
 		messages: [
-			"有什么需要帮助的吗？",
-			"今天天气真不错呢！",
-			"要不要一起玩游戏？",
-			"记得按时休息哦！",
+			"喂，狗修金，吾辈最近在想啊，吾辈是不是为了遇见你，才度过了这五百年的时光呢....",
+			"无论遇到多大的困难，只要和你在一起，我就有勇气去面对。因为，你是我的依靠啊。",
+			"盯----------",
+			"记得按时休息哦，狗修金！",
 		],
 		// 文字显示时间（ms）
 		duration: 3000,
 		// 提示气泡切换间隔（ms）
-		interval: 6000,
+		interval: 7000,
 		// 位置偏移量（px），基于默认位置（模型正上方居中）进行微调
 		offset: {
 			x: 0, // 正值右移，负值左移

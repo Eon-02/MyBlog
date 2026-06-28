@@ -35,6 +35,8 @@ export type SpineModelConfig = {
 // Live2D 看板娘配置 (使用 l2d-widget)
 export type Live2DWidgetConfig = {
 	enable: boolean; // 是否启用 Live2D 看板娘
+	/** 是否禁用鼠标追踪（模型不再跟随鼠标转动头部），默认 false */
+	disableMouseTracking?: boolean;
 	model:
 		| { path: string; volume?: number; scale?: number; x?: number; y?: number }
 		| {
