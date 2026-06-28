@@ -12,7 +12,7 @@ export const siteConfig: SiteConfig = {
 	subtitle: "Ciallo～(∠・ω<)⌒★",
 
 	// 站点 URL
-	site_url: "https://firefly.cuteleaf.cn",
+	site_url: "https://aaayuzu.cc.cd/",
 
 	// 站点描述
 	description:
@@ -22,7 +22,7 @@ export const siteConfig: SiteConfig = {
 	keywords: [
 		"galgame",
 		"AAA柚子÷批发",
-		"godot"
+		"godot",
 	],
 
 	// 主题色
